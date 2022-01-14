@@ -32,30 +32,31 @@ public class App {
 			MongoDatabase database = mongoClient.getDatabase("bibliotecaMongo");
 			MongoCollection<Document> coleccion = database.getCollection("libro");
 			
-			Thread.sleep(1000);
+			Thread.sleep(2000);
 			
-			//Controlador(coleccion, sc);
-			
+			Controlador(coleccion, mongoClient, sc);
 			mongoClient.close();
+						
+			System.out.println("");
+			Thread.sleep(2000);
 			
 		}
 
-		System.out.println(" >> FIN << ");
+		System.out.println(" >> Gracias por su tiempo << ");
 	}
 	
-	/*
+	
 	// Controlador de la app, gestiona el control de la conexion a la base de datos
-	static void Controlador( Session session, Scanner sc )
+	static void Controlador( MongoCollection<Document> coleccion, MongoClient mongoClient, Scanner sc )
 	{	
-		boolean appContinua = true;
-
 		System.out.println( "\n> QUE DESEA HACER? <" );
 		System.out.println( "1 = Mostrar todos los libros" );
 		System.out.println( "2 = Mostrar un libro" );
 		System.out.println( "3 = Anyadir libro a biblioteca" );
 		System.out.println( "4 = Modificar atributos de un libro" );
 		System.out.println( "5 = Borrar un libro" );
-		System.out.println( "6 = Cerrar APP" );
+		System.out.println( "6 = Importar libros del CSV a la BD" );
+		System.out.println( "7 = Cerrar APP" );
 		
 		System.out.print("> ");
 		String opcion = sc.next();
@@ -67,16 +68,7 @@ public class App {
 			case "1":
 				try
 				{
-					List<Libro> biblioteca = new ArrayList(); //Diferencia entre list y arraylist??
-					biblioteca = session.createQuery("FROM Libro").list();
-					
-					System.out.println("");
-					for( Libro libro : biblioteca )
-					{
-						System.out.println( libro.toString() );	
-					}
-					
-					System.out.println(">> Libros mostrados correctamente de la Base de Datos\n");
+					MostrarTodosLibros(coleccion);
 				}
 				catch( Exception e )
 				{
@@ -89,13 +81,7 @@ public class App {
 			case "2":
 				try
 				{
-					System.out.print("\nIntroduce el ID del libro : ");
-					int id = sc.nextInt();
-					
-					Libro libro = (Libro) session.get(Libro.class, id);
-					
-					System.out.println( libro.toString() );						
-					System.out.println(">> Libro mostrado correctamente de la Base de Datos\n");
+					MostrarLibro(coleccion, sc);
 				}				
 				catch( Exception e )
 				{
@@ -108,10 +94,7 @@ public class App {
 			case "3":
 				try
 				{
-					Libro libro = CrearUnLibro( sc );
-					Serializable id = session.save( libro ); // devuelve el id del objeto que ha creado en la base de datos
-					
-					System.out.println(">> ID : " + id + " | 1Libro anyadido correctamente de la Base de Datos\n");
+					AnyadirLibro(coleccion, sc);
 				}				
 				catch( Exception e )
 				{
@@ -124,14 +107,7 @@ public class App {
 			case "4":
 				try
 				{
-					System.out.print("\nIntroduce el ID del libro : ");
-					int id = sc.nextInt();
-					
-					Libro libroModificar = (Libro) session.get(Libro.class, id); // almacena la informacion de un libro de la base de datos en el libro
-					Libro libroModificado = CrearUnLibro( sc );// Crea un nuevo libro que reescribe al libro en bd
-					session.update(libroModificado);
-					
-					System.out.println(">> Libro actualizado correctamente de la Base de Datos\n");
+					ActualizarLibro(coleccion, sc);
 				}
 				catch( Exception e )
 				{
@@ -144,13 +120,7 @@ public class App {
 			case "5":
 				try
 				{
-					System.out.print("\nIntroduce el ID del libro : ");
-					int id = sc.nextInt();
-					
-					Libro libro = (Libro) session.get(Libro.class, id);
-					session.delete(libro);
-					
-					System.out.println(">> Libro eliminado correctamente de la Base de Datos\n");
+					EliminarLibro(coleccion, sc);
 				}
 				catch( Exception e )
 				{
@@ -159,8 +129,23 @@ public class App {
 				
 				break;
 			
+			// Importar libros del CSV a la BD
+			case "6":
+				try
+				{
+					String rutaficheroCSV = "/home/jordi/Documents/eclipse-workspace/jordi_estelles_navarro_AE6_ADD/datos/AE06_T3_1_MongoDB_Datos.csv";
+					
+					GestionBDMongo gestor = new GestionBDMongo();
+					gestor.MigracionABDMySQL(gestor.AnalizarCSV(rutaficheroCSV), coleccion, mongoClient);
+				}
+				catch( Exception e)
+				{
+					e.printStackTrace();
+				}
+				break;
+				
 			// Cerrar la app
-			case "6" :
+			case "7" :
 				continuar = false;
 				
 				break;
@@ -179,12 +164,12 @@ public class App {
 			e.printStackTrace();
 		}
 	}
-	*/
 	
 	
-	// Crea un libro, se utiliza para crear y anyadir libros a la base de datos pero tambien para modificar un libro ya existente
-	// Devuelve un libro
-	public static Document CrearLibro( Scanner sc )
+	
+	// Pide al usuario que indique los datos del libro a registrar
+	// Devuelve el libro como Document
+	static Document CrearLibro( Scanner sc )
 	{		
 		Document doc = new Document();
 		
@@ -218,7 +203,8 @@ public class App {
 	}
 	
 	
-	public void AnyadirLibro( MongoCollection<Document> coleccion, Scanner sc )
+	// Anyade un libro previamente creado a la base de datos
+	public static void AnyadirLibro( MongoCollection<Document> coleccion, Scanner sc )
 	{
 		Document doc = CrearLibro(sc);
 		
@@ -226,6 +212,7 @@ public class App {
 	}
 	
 	
+	// Muestra todos los libros que contiene la base de datos
 	public static void MostrarTodosLibros( MongoCollection<Document> coleccion ) 
 	{
 		try
@@ -247,6 +234,8 @@ public class App {
 		}
 	}
 	
+	
+	// Introduciendo un titulo muestra los libros con ese mismo titulo que contiene la base de datos
 	public static Bson MostrarLibro( MongoCollection<Document> coleccion, Scanner sc )
 	{
 		System.out.print("\nIntroduce el titulo del libro : ");
@@ -261,6 +250,9 @@ public class App {
 			while(cursor.hasNext()) {
 				contieneElementos = true;				
 				System.out.println(cursor.next().toJson());
+				// Se puede parseal el Json para mostrar los elementos que queramos, sustituir la linea anterior por :
+				//JSONObject objeto = new JSONObject(cursor.next().toJson());
+				//System.out.println(objeto.getString("titulo"));
 			}
 			
 			if(!contieneElementos) {
@@ -275,17 +267,11 @@ public class App {
 		}
 		
 		return query = null;
-		
-		// Se puede parseal el Json para mostrar los elementos que queramos
-		/*
-		while(cursor.hasNext()){
-			JSONObject objeto = new JSONObject(cursor.next().toJson());
-			System.out.println(objeto.getString("titulo"));
-		}
-		*/
 	}
 	
 	
+	// Pide al usuario que indique el libro que quiere modificar, lo muestra y pregunta al usuario si quiere editarlo
+	// Actualiza el libro anterior con los nuevos datos
 	public static void ActualizarLibro( MongoCollection<Document> coleccion, Scanner sc )
 	{
 		try
@@ -300,6 +286,7 @@ public class App {
 				if(actualizar.equals("s") && contieneElementos || actualizar.equals("S") && contieneElementos) {
 					Document nuevoLibro = CrearLibro(sc);
 					coleccion.updateOne(query, new Document("$set", new Document(nuevoLibro)));
+					// coleccion.updateMany(query, new Document("$set", new Document(nuevoLibro))) // actualiza todos los elementos que coincidan con la query de find
 
 					System.out.println("Libro actualizado con exito");
 				}
@@ -318,18 +305,21 @@ public class App {
 	}
 	
 	
-	public void EliminarLibro( MongoCollection<Document> coleccion, Scanner sc )
+	// Pide al usuario que indique el titulo del libro, lo muestra y pregunta al usuario si quiere eliminarlo
+	// Elimina el libro seleccionado
+	public static void EliminarLibro( MongoCollection<Document> coleccion, Scanner sc )
 	{
 		try 
 		{
 			Bson query = MostrarLibro(coleccion, sc);
 			
 			if(contieneElementos) {
-				System.out.print("> Esta seguro de que quiere eliminar el libro? s / n\n");
+				System.out.print("> Esta seguro de que quiere eliminar el libro? s/n : ");
 				String eliminar = sc.next();
 				
 				if(eliminar.equals("s") && contieneElementos || eliminar.equals("S") && contieneElementos ) {
-					coleccion.deleteOne(query);		
+					coleccion.deleteOne(query);	
+					// coleccion.deleteMany(query); // Elimina todos los elementos que coincidan con la query
 					coleccion.drop();
 					
 					System.out.println("Libro eliminado con exito");

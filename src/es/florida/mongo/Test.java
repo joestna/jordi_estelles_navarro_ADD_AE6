@@ -16,6 +16,7 @@ public class Test
 	{
 		Scanner sc = new Scanner(System.in);
 		
+		/*
 		while( continuar ) {
 			// Conexion a base de datos MongoDB
 			MongoClient mongoClient = new MongoClient("localhost", 27017);
@@ -25,13 +26,14 @@ public class Test
 			Thread.sleep(2000);
 			
 			App app = new App();
-			app.ActualizarLibro(coleccion, sc);
+			app.Controlador(coleccion, sc);
 			mongoClient.close();
 						
 			System.out.println("");
 			Thread.sleep(2000);
 			
 		}
+		*/
 
 		System.out.println(" >> FIN << ");
 	}
