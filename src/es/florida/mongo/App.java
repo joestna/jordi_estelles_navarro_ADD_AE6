@@ -19,6 +19,7 @@ import static com.mongodb.client.model.Filters.*;
 public class App {
 	
 	static boolean continuar = true;
+	static boolean contieneElementos = false;
 
 	// Realiza la conexion a la base de datos utilizando hibernate y asegura las query
 	public static void main(String[] args) throws InterruptedException
@@ -206,36 +207,64 @@ public class App {
 		int numPaginas = sc.nextInt();
 		
 		Libro libro = new Libro( titulo, autor, anyoNacimiento, anyoPublicacion, editorial, numPaginas );				
-		doc.append("titulo:", libro.getTitulo());
-		doc.append("autor:", libro.getAutor());
-		doc.append("anyo_nacimiento:", libro.getAnyoNacimiento());
-		doc.append("anyo_publicacion:", libro.getAnyoPublicacion());
-		doc.append("editorial:", libro.getEditorial());
-		doc.append("paginas:", libro.getNumeroPaginas());
+		doc.append("titulo", libro.getTitulo());
+		doc.append("autor", libro.getAutor());
+		doc.append("anyo_nacimiento", libro.getAnyoNacimiento());
+		doc.append("anyo_publicacion", libro.getAnyoPublicacion());
+		doc.append("editorial", libro.getEditorial());
+		doc.append("paginas", libro.getNumeroPaginas());
 		
 		return doc;
 	}
 	
 	
-	public void AnyadirLibro( MongoCollection<Document> coleccion, Document doc )
+	public void AnyadirLibro( MongoCollection<Document> coleccion, Scanner sc )
 	{
+		Document doc = CrearLibro(sc);
+		
 		coleccion.insertOne(doc);
 	}
 	
 	
+	public static void MostrarTodosLibros( MongoCollection<Document> coleccion ) 
+	{
+		try
+		{
+			MongoCursor<Document> cursor = coleccion.find().iterator();
+			
+			while(cursor.hasNext()) {
+				contieneElementos = true;
+				System.out.println(cursor.next().toJson());
+			}
+			
+			if(!contieneElementos) {
+				System.out.println("No se encuentran libros.");
+			}
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+	
 	public static Bson MostrarLibro( MongoCollection<Document> coleccion, Scanner sc )
 	{
-		System.out.println("Introduce el titulo del libro : ");
+		System.out.print("\nIntroduce el titulo del libro : ");
 		String titulo = sc.next();		
 		Bson query;
 		
 		try
 		{
 			query = eq("titulo", titulo);			
-			MongoCursor<Document> cursor = coleccion.find(query).iterator();
+			MongoCursor<Document> cursor = coleccion.find(query).iterator(); // Verificar que es lo que mostraria cursor si no existe el elemento buscado
 			
 			while(cursor.hasNext()) {
+				contieneElementos = true;				
 				System.out.println(cursor.next().toJson());
+			}
+			
+			if(!contieneElementos) {
+				System.out.println("El libro buscado no existe");
 			}
 			
 			return query;
@@ -261,24 +290,29 @@ public class App {
 	{
 		try
 		{
+			sc = new Scanner(System.in);
 			Bson query = MostrarLibro(coleccion, sc);
-			
-			System.out.println("> Esta seguro de que quiere actualizar el libro? s \n");
-			String actualizar = sc.next();
-			
-			if(actualizar.equals("s") || actualizar.equals("S")) {
-				Document nuevoLibro;
-				nuevoLibro = CrearLibro(sc);
-				coleccion.updateOne(query, new Document("$set", new Document(nuevoLibro)));
+		
+			if(contieneElementos) {
+				System.out.print("> Esta seguro de que quiere actualizar el libro? s/n : ");
+				String actualizar = sc.next();
+				
+				if(actualizar.equals("s") && contieneElementos || actualizar.equals("S") && contieneElementos) {
+					Document nuevoLibro = CrearLibro(sc);
+					coleccion.updateOne(query, new Document("$set", new Document(nuevoLibro)));
 
-				System.out.println("Libro actualizado con exito");
-			}
-			else {
-				System.out.println("Libro no actualizado");
-			}	
+					System.out.println("Libro actualizado con exito");
+				}
+				else {
+					System.out.println("Libro no actualizado");
+				}
+			}			
+			
+			contieneElementos = false;
 		}
 		catch(Exception e)
 		{
+			contieneElementos = false;
 			e.printStackTrace();
 		}
 	}
@@ -290,18 +324,22 @@ public class App {
 		{
 			Bson query = MostrarLibro(coleccion, sc);
 			
-			System.out.println("> Esta seguro de que quiere eliminar el libro? s / n\n");
-			String eliminar = sc.next();
-			
-			if(eliminar.equals("s") || eliminar.equals("S")) {
-				coleccion.deleteOne(query);		
-				coleccion.drop();
+			if(contieneElementos) {
+				System.out.print("> Esta seguro de que quiere eliminar el libro? s / n\n");
+				String eliminar = sc.next();
 				
-				System.out.println("Libro eliminado con exito");
+				if(eliminar.equals("s") && contieneElementos || eliminar.equals("S") && contieneElementos ) {
+					coleccion.deleteOne(query);		
+					coleccion.drop();
+					
+					System.out.println("Libro eliminado con exito");
+				}
+				else {
+					System.out.println("Libro no eliminado");
+				}	
 			}
-			else {
-				System.out.println("Libro no eliminado");
-			}	
+			
+			contieneElementos = false;
 		}
 		catch (Exception e)
 		{

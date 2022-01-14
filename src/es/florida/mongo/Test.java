@@ -22,12 +22,14 @@ public class Test
 			MongoDatabase database = mongoClient.getDatabase("bibliotecaMongo");
 			MongoCollection<Document> coleccion = database.getCollection("libro");
 			
-			Thread.sleep(1000);
+			Thread.sleep(2000);
 			
 			App app = new App();
-			app.CrearUnLibro(coleccion, sc);
-			
+			app.ActualizarLibro(coleccion, sc);
 			mongoClient.close();
+						
+			System.out.println("");
+			Thread.sleep(2000);
 			
 		}
 
