@@ -5,6 +5,7 @@ import java.util.Scanner;
 
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Projections;
 
 import static com.mongodb.client.model.Filters.*;
 
@@ -20,13 +22,14 @@ public class App {
 	
 	static boolean continuar = true;
 	static boolean contieneElementos = false;
+	static List<JSONObject> json = new ArrayList<JSONObject>();
 
 	// Realiza la conexion a la base de datos utilizando hibernate y asegura las query
 	public static void main(String[] args) throws InterruptedException
 	{
-		Scanner sc = new Scanner(System.in);
-		
 		while( continuar ) {
+			Scanner sc = new Scanner(System.in).useDelimiter("\n");
+			
 			// Conexion a base de datos MongoDB
 			MongoClient mongoClient = new MongoClient("localhost", 27017);
 			MongoDatabase database = mongoClient.getDatabase("bibliotecaMongo");
@@ -36,10 +39,10 @@ public class App {
 			
 			Controlador(coleccion, mongoClient, sc);
 			mongoClient.close();
+			contieneElementos = false;
 						
-			System.out.println("");
+			System.out.println("");			
 			Thread.sleep(2000);
-			
 		}
 
 		System.out.println(" >> Gracias por su tiempo << ");
@@ -47,7 +50,7 @@ public class App {
 	
 	
 	// Controlador de la app, gestiona el control de la conexion a la base de datos
-	static void Controlador( MongoCollection<Document> coleccion, MongoClient mongoClient, Scanner sc )
+	static void Controlador( MongoCollection<Document> coleccion, MongoClient mongoClient, Scanner sc)
 	{	
 		System.out.println( "\n> QUE DESEA HACER? <" );
 		System.out.println( "1 = Mostrar todos los libros" );
@@ -152,6 +155,8 @@ public class App {
 				
 			default :
 				System.out.println(">> Valor introducido incorrecto!\n");
+				
+				break;
 		}
 		
 		// Pausa la app 2 segundos para que si se lanza alguna exception en la seleccion anterior no rompa el menu
@@ -213,15 +218,21 @@ public class App {
 	
 	
 	// Muestra todos los libros que contiene la base de datos
-	public static void MostrarTodosLibros( MongoCollection<Document> coleccion ) 
+	public static void MostrarTodosLibros( MongoCollection<Document> coleccion) 
 	{
+		Bson projectionFields = Projections.fields(Projections.include("_id", "titulo"));
+				
 		try
 		{
-			MongoCursor<Document> cursor = coleccion.find().iterator();
+			MongoCursor<Document> cursor = coleccion.find().projection(projectionFields).iterator();
+			
 			
 			while(cursor.hasNext()) {
 				contieneElementos = true;
 				System.out.println(cursor.next().toJson());
+				//database.libro;
+				
+				//coleccion.find({"_id" : "$id", "titulo" : "$titulo"});
 			}
 			
 			if(!contieneElementos) {
@@ -238,18 +249,22 @@ public class App {
 	// Introduciendo un titulo muestra los libros con ese mismo titulo que contiene la base de datos
 	public static Bson MostrarLibro( MongoCollection<Document> coleccion, Scanner sc )
 	{
-		System.out.print("\nIntroduce el titulo del libro : ");
-		String titulo = sc.next();		
-		Bson query;
+		System.out.print("\nIntroduce el id del libro : ");
+		String id = sc.next();
+		//System.out.print("\nIntroduce el titulo del libro : ");
+		//String titulo = sc.next();
 		
+		Bson query;		
 		try
 		{
-			query = eq("titulo", titulo);			
+			query = eq("_id", Integer.valueOf(id));	
+			//query = eq("titulo", titulo);		
 			MongoCursor<Document> cursor = coleccion.find(query).iterator(); // Verificar que es lo que mostraria cursor si no existe el elemento buscado
 			
 			while(cursor.hasNext()) {
 				contieneElementos = true;				
 				System.out.println(cursor.next().toJson());
+				System.out.println("entra");
 				// Se puede parseal el Json para mostrar los elementos que queramos, sustituir la linea anterior por :
 				//JSONObject objeto = new JSONObject(cursor.next().toJson());
 				//System.out.println(objeto.getString("titulo"));
@@ -320,7 +335,7 @@ public class App {
 				if(eliminar.equals("s") && contieneElementos || eliminar.equals("S") && contieneElementos ) {
 					coleccion.deleteOne(query);	
 					// coleccion.deleteMany(query); // Elimina todos los elementos que coincidan con la query
-					coleccion.drop();
+					// coleccion.drop();
 					
 					System.out.println("Libro eliminado con exito");
 				}
